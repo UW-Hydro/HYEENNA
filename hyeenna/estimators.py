@@ -25,7 +25,7 @@ def entropy(X: np.array, k: int=K) -> float:
     if len(X.shape) == 1:
         X = X.reshape(-1, 1)
     n, d = X.shape
-    r = nearest_distances(X, k) + EPS * np.random.random(n)
+    r = nearest_distances(X, k) + EPS * np.random.random(size=n)
     ent = d * np.log(np.mean(r)) + psi(n) - psi(k) + d * np.log(2)
     return ent
 
@@ -36,7 +36,7 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
     if len(Y.shape) == 1:
         Y = Y.reshape(-1, 1)
     n, d = X.shape
-    r = nearest_distances(np.hstack([X, Y]), k) - EPS * np.random.random(n)
+    r = nearest_distances(np.hstack([X, Y]), k) - EPS * np.random.random(size=n)
     n_x = marginal_neighbors(X, r)
     n_y = marginal_neighbors(Y, r)
     return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x) + psi(n_y))
@@ -57,7 +57,7 @@ def conditional_mutual_info(
     yz = np.hstack([Y, Z])
     z = np.hstack([Z])
     xyz = np.hstack([X, Y, Z])
-    r = nearest_distances(xyz, k) + EPS * np.random.random(n)
+    r = nearest_distances(xyz, k) + EPS * np.random.random(size=n)
     n_xz = marginal_neighbors(xz, r)
     n_yz = marginal_neighbors(yz, r)
     n_z = marginal_neighbors(z, r)
@@ -67,7 +67,7 @@ def conditional_mutual_info(
 def transfer_entropy(X: np.array, Y: np.array, tau: int,
                      omega: int, k: int, l: int) -> float:
     end = -(np.max([k, l]) + np.max([tau, omega]))
-    x = [X[:end]]
+    x = [Y[:end]]
     y, z = [], []
     for w in range(tau, tau+k):
         y.append(X[w:end+w])
@@ -84,19 +84,19 @@ def conditional_transfer_entropy(X: np.array, Y: np.array,
                                  Z: np.array, tau: int, omega: int,
                                  k: int, l: int) -> float:
     end = -(np.max([k, l]) + np.max([tau, omega]))
-    dZ, nZ = Z.shape
-    x = [X[:end]]
+    nZ, dZ = Z.shape
+    x = [Y[:end]]
     nX = len(X[:end])
     y, z1, z2 = [], [], []
-    for w in range(tau+1, tau+l+1):
+    for w in range(tau, tau+k):
         y.append(X[w:end+w])
-    for w in range(omega+1, omega+k+1):
+    for w in range(omega, omega+l):
         z1.append(Y[w:end+w])
-        z2.append(Z[:, w:end+w].flatten().reshape(-1, nX))
+        z2.append(Z[w:end+w].reshape(-1, nX))
     # TODO: FIXME: Make sure these are flexible
     x = np.array(x).reshape(-1, 1)
-    y = np.array(y).reshape(-1, l)
-    z1 = np.array(z1).reshape(-1, k)
-    z2 = np.array(z2).reshape(-1, dZ*k)
+    y = np.array(y).reshape(-1, k)
+    z1 = np.array(z1).reshape(-1, l)
+    z2 = np.array(z2).reshape(-1, dZ*l)
     z = np.hstack([np.array(z1), np.array(z2)])
     return conditional_mutual_info(x, y, z)
