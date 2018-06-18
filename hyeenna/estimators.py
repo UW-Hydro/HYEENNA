@@ -90,13 +90,13 @@ def conditional_transfer_entropy(X: np.array, Y: np.array,
     y, z1, z2 = [], [], []
     for w in range(tau, tau+k):
         y.append(X[w:end+w])
+        z2.append(Z[w:end+w].reshape(-1, nX))
     for w in range(omega, omega+l):
         z1.append(Y[w:end+w])
-        z2.append(Z[w:end+w].reshape(-1, nX))
     # TODO: FIXME: Make sure these are flexible
     x = np.array(x).reshape(-1, 1)
     y = np.array(y).reshape(-1, k)
     z1 = np.array(z1).reshape(-1, l)
-    z2 = np.array(z2).reshape(-1, dZ*l)
+    z2 = np.array(z2).reshape(-1, dZ*k)
     z = np.hstack([np.array(z1), np.array(z2)])
     return conditional_mutual_info(x, y, z)

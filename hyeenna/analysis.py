@@ -2,8 +2,6 @@ import itertools
 import numpy as np
 import pandas as pd
 import xarray as xr
-import scipy.stats as st
-from functools import reduce
 from .estimators import entropy
 from .estimators import transfer_entropy as te
 from .estimators import conditional_transfer_entropy as cte
@@ -18,7 +16,7 @@ def estimate_timescales(X, Y, lag_list, window_list, sample_size=5000):
         max_start = len(X) - l - w - ss
         si = np.random.randint(0, max_start)
         Xs, Ys = X[si:si+ss], Y[si:si+ss]
-        out.loc[{'lag': l, 'window': w}] = transfer_entropy(Xs, Ys, l, 1, w, 1)
+        out.loc[{'lag': l, 'window': w}] = te(Xs, Ys, l, 1, w, 1)
     return out
 
 
@@ -53,17 +51,17 @@ def shuffle_test(estimator: callable, data: dict,
         ss = np.min([sample_size, (len(X)-l-o)//2])
         max_start = len(X) - l - o - ss
         si = np.random.randint(0, max_start)
-        data2 = {key: val[:, si:si+ss] for key, val in data.items()}
+        data2 = {key: val[:][si:si+ss] for key, val in data.items()}
         for key, val in data2.items():
             np.random.shuffle(val)
         shuffled_te.append(estimator(**data2, **params))
 
     stats['shuffled_results'] = shuffled_te
-    stats['ci'] = [np.percentile(shuffled_te, 5), np.percentile(shuffled_te, 95)]
+    stats['ci'] = [np.percentile(shuffled_te, 5),
+                   np.percentile(shuffled_te, 95)]
     stats['shuffled_median'] = np.median(shuffled_te)
-    n_significant = np.sum(list(map(
-        lambda x: x < stats['ci'][0] or x > stats['ci'][1], stats['results'])))
-    stats['significant'] = n_significant > (0.7 * nruns)
+    stats['significant'] = ((stats['median'] < stats['ci'][0])
+                            or (stats['median'] > stats['ci'][1]))
     return stats
 
 
@@ -75,7 +73,7 @@ def estimate_network(varlist: list, names: list, out_file: str,
     mapping = {n: d for n, d in zip(names, varlist)}
     permutations = [list(l) for l in list(itertools.permutations(names, 2))]
     for combo in permutations:
-        n = [n for n in names if n not in combo ]
+        n = [n for n in names if n not in combo]
         [combo.append(nn) for nn in n]
     # Subsample data and put it together with combination list
     analysis_sets = []
@@ -84,7 +82,6 @@ def estimate_network(varlist: list, names: list, out_file: str,
     # Compute scores
     scores = []
     params = {'tau': tau, 'omega': omega, 'k': k, 'l': l}
-              #'nruns': nruns, 'sample_size': sample_size}
     for c, s in zip(permutations, analysis_sets):
         if condition:
             X = np.array(s[0]).reshape(-1, 1)
