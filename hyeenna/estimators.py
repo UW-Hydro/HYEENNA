@@ -80,23 +80,27 @@ def transfer_entropy(X: np.array, Y: np.array, tau: int,
     return conditional_mutual_info(x, y, z)
 
 
-def conditional_transfer_entropy(X: np.array, Y: np.array,
-                                 Z: np.array, tau: int, omega: int,
-                                 k: int, l: int) -> float:
-    end = -(np.max([k, l]) + np.max([tau, omega]))
+def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
+                                 tau: int, omega: int, nu: int,
+                                 k: int, l: int, m: int) -> float:
+    end = len(X) - (np.max([k, l, m]) + np.max([tau, omega, nu]))
     nZ, dZ = Z.shape
     x = [Y[:end]]
     nX = len(X[:end])
     y, z1, z2 = [], [], []
     for w in range(tau, tau+k):
         y.append(X[w:end+w])
-        z2.append(Z[w:end+w].reshape(-1, nX))
     for w in range(omega, omega+l):
         z1.append(Y[w:end+w])
+    for w in range(nu, nu+m):
+        z2.append(Z[w:end+w].reshape(-1, nX))
     # TODO: FIXME: Make sure these are flexible
     x = np.array(x).reshape(-1, 1)
     y = np.array(y).reshape(-1, k)
     z1 = np.array(z1).reshape(-1, l)
-    z2 = np.array(z2).reshape(-1, dZ*k)
-    z = np.hstack([np.array(z1), np.array(z2)])
+    if len(z2):
+        z2 = np.array(z2).reshape(-1, dZ*m)
+        z = np.hstack([np.array(z1), np.array(z2)])
+    else:
+        z = z1
     return conditional_mutual_info(x, y, z)
