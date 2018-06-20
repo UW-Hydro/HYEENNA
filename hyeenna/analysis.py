@@ -2,6 +2,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import xarray as xr
+from joblib import Parallel, delayed
 from .estimators import entropy
 from .estimators import transfer_entropy as te
 from .estimators import conditional_transfer_entropy as cte
@@ -20,53 +21,67 @@ def estimate_timescales(X, Y, lag_list, window_list, sample_size=5000):
     return out
 
 
+def _run_one_estimator_stats(estimator, data, params, sample_size):
+    np.random.seed(None)
+    X = list(data.values())[0]
+    l, w = params.get('l', 1), params.get('omega', 1)
+    ss = np.min([sample_size, (len(X)-l-w)//2])
+    max_start = len(X) - l - w - ss
+    si = np.random.randint(0, max_start)
+    data2 = {k: v[:][si:si+ss] for k, v in data.items()}
+    return estimator(**data2, **params)
+
+
 def estimator_stats(estimator: callable, data: dict, params: dict,
                     nruns: int=10, sample_size: int=3000) -> dict:
-    results = []
-    for _ in range(nruns):
-        X = list(data.values())[0]
-        l, w = params.get('l', 1), params.get('omega', 1)
-        ss = np.min([sample_size, (len(X)-l-w)//2])
-        max_start = len(X) - l - w - ss
-        si = np.random.randint(0, max_start)
-        data2 = {k: v[:][si:si+ss] for k, v in data.items()}
-        results.append(estimator(**data2, **params))
+    results = Parallel(n_jobs=nruns)(delayed(_run_one_estimator_stats)(
+        estimator, data, params, sample_size) for i in range(nruns))
     statistics = {'mean': np.mean(results),
                   'median': np.median(results),
-                  'variance': np.var(results),
+                  'variance': np.var(results, ddof=1),
                   'max': np.max(results),
                   'min': np.min(results),
                   'results': results}
     return statistics
 
 
+def _run_one_shuffle_test(estimator, data, params, sample_size):
+    np.random.seed(None)
+    X = list(data.values())[0]
+    l, o = params.get('l', 1), params.get('omega', 1)
+    ss = np.min([sample_size, (len(X)-l-o)//2])
+    max_start = len(X) - l - o - ss
+    si = np.random.randint(0, max_start)
+    data2 = {key: val[:][si:si+ss].copy() for key, val in data.items()}
+    for key, val in data2.items():
+        np.random.shuffle(val)
+    return estimator(**data2, **params)
+
+
 def shuffle_test(estimator: callable, data: dict,
                  params: dict, nruns: int=10,
                  sample_size: int=3000, ci: float=0.95) -> dict:
     stats = estimator_stats(estimator, data, params, nruns, sample_size)
-    shuffled_te = []
-    for i in range(nruns):
-        X = list(data.values())[0]
-        l, o = params.get('l', 1), params.get('omega', 1)
-        ss = np.min([sample_size, (len(X)-l-o)//2])
-        max_start = len(X) - l - o - ss
-        si = np.random.randint(0, max_start)
-        data2 = {key: val[:][si:si+ss] for key, val in data.items()}
-        for key, val in data2.items():
-            np.random.shuffle(val)
-        shuffled_te.append(estimator(**data2, **params))
 
+    shuffled_te = Parallel(n_jobs=nruns)(delayed(_run_one_shuffle_test)(
+        estimator, data, params, sample_size) for i in range(nruns))
     stats['shuffled_results'] = shuffled_te
     stats['ci'] = [np.percentile(shuffled_te, 5),
                    np.percentile(shuffled_te, 95)]
+    c = 1.66
+    c = 2.36
     stats['shuffled_median'] = np.median(shuffled_te)
-    stats['significant'] = ((stats['median'] < stats['ci'][0])
-                            or (stats['median'] > stats['ci'][1]))
+    stats['shuffled_mean'] = np.mean(shuffled_te)
+    stats['shuffled_variance'] = np.var(shuffled_te, ddof=1)
+    stats['shuffled_thresh'] = (
+            stats['shuffled_mean'] + c * stats['shuffled_variance'])
+    stats['significant'] = stats['median'] > stats['shuffled_thresh']
     return stats
 
 
 def estimate_network(varlist: list, names: list, out_file: str,
-                     tau: int=1, omega: int=1, k: int=1, l: int=1,
+                     tau: int=1, omega: int=1, nu: int=1,
+                     k: int=1, l: int=1, m: int=1,
                      condition: bool=True, test_significance: bool=True,
                      nruns: int=10, sample_size: int=3000) -> pd.DataFrame:
     # Calculate all needed variable combinations
