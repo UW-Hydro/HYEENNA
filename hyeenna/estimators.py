@@ -17,7 +17,7 @@ def nearest_distances(X: np.array, k: int=K) -> list:
 def marginal_neighbors(X: np.array, R: np.array) -> list:
     knn = NearestNeighbors(metric=METRIC)
     knn.fit(X)
-    return [len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
+    return [1+len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
             for p, r in zip(X, R)]
 
 
@@ -65,7 +65,7 @@ def conditional_mutual_info(
 
 
 def transfer_entropy(X: np.array, Y: np.array, tau: int,
-                     omega: int, k: int, l: int) -> float:
+                     omega: int, k: int, l: int, **kwargs) -> float:
     end = -(np.max([k, l]) + np.max([tau, omega]))
     x = [Y[:end]]
     y, z = [], []
