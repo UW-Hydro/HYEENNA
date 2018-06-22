@@ -60,30 +60,29 @@ def _run_one_shuffle_test(estimator, data, params, sample_size):
 
 def shuffle_test(estimator: callable, data: dict,
                  params: dict, nruns: int=10,
-                 sample_size: int=3000, ci: float=0.95) -> dict:
+                 sample_size: int=3000) -> dict:
     stats = estimator_stats(estimator, data, params, nruns, sample_size)
 
     shuffled_te = Parallel(n_jobs=nruns)(delayed(_run_one_shuffle_test)(
         estimator, data, params, sample_size) for i in range(nruns))
     stats['shuffled_results'] = shuffled_te
-    stats['ci'] = [np.percentile(shuffled_te, 5),
-                   np.percentile(shuffled_te, 95)]
-    c = 1.66
-    c = 2.36
+    stats['ci'] = [np.percentile(shuffled_te, 1),
+                   np.percentile(shuffled_te, 99)]
     stats['shuffled_median'] = np.median(shuffled_te)
     stats['shuffled_mean'] = np.mean(shuffled_te)
     stats['shuffled_variance'] = np.var(shuffled_te, ddof=1)
+    c = 2.36
     stats['shuffled_thresh'] = (
             stats['shuffled_mean'] + c * stats['shuffled_variance'])
     stats['significant'] = stats['median'] > stats['shuffled_thresh']
     return stats
 
 
-def estimate_network(varlist: list, names: list, out_file: str,
+def estimate_network(varlist: list, names: list,
                      tau: int=1, omega: int=1, nu: int=1,
                      k: int=1, l: int=1, m: int=1,
-                     condition: bool=True, test_significance: bool=True,
-                     nruns: int=10, sample_size: int=3000) -> pd.DataFrame:
+                     condition: bool=True, nruns: int=10,
+                     sample_size: int=3000) -> pd.DataFrame:
     # Calculate all needed variable combinations
     mapping = {n: d for n, d in zip(names, varlist)}
     permutations = [list(l) for l in list(itertools.permutations(names, 2))]
@@ -96,7 +95,7 @@ def estimate_network(varlist: list, names: list, out_file: str,
         analysis_sets.append([mapping[c] for c in combo])
     # Compute scores
     scores = []
-    params = {'tau': tau, 'omega': omega, 'k': k, 'l': l}
+    params = {'tau': tau, 'omega': omega, 'nu': nu, 'k': k, 'l': l, 'm': m}
     for c, s in zip(permutations, analysis_sets):
         if condition:
             X = np.array(s[0]).reshape(-1, 1)
@@ -113,16 +112,9 @@ def estimate_network(varlist: list, names: list, out_file: str,
                     'params': params, 'nruns': nruns,
                     'sample_size': sample_size}
 
-        if test_significance:
-            res = shuffle_test(**args)
-            if res['significant']:
-                scores.append(res['median'])
-            else:
-                scores.append(0.0)
-        else:
-            res = estimator_stats(**args)
-            scores.append(res['median'])
-    # Reformat into a nice dataframe, save it, and return
+        res = shuffle_test(**args)
+        scores.append(res['median'])
+    # Reformat into a dataframe
     df = pd.DataFrame(columns=names, index=names)
     for link, score in zip(permutations, scores):
         if score < 1e-4:
@@ -132,5 +124,4 @@ def estimate_network(varlist: list, names: list, out_file: str,
         e_tot = entropy(var)
         tot_exp = df.loc[name, :].sum()
         df[name][name] = e_tot - tot_exp
-    df.to_csv('./data/{}.csv'.format(out_file))
     return df
