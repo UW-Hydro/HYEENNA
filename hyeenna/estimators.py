@@ -17,7 +17,7 @@ def nearest_distances(X: np.array, k: int=K) -> list:
 def marginal_neighbors(X: np.array, R: np.array) -> list:
     knn = NearestNeighbors(metric=METRIC)
     knn.fit(X)
-    return [1+len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
+    return [len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
             for p, r in zip(X, R)]
 
 
@@ -25,8 +25,18 @@ def entropy(X: np.array, k: int=K) -> float:
     if len(X.shape) == 1:
         X = X.reshape(-1, 1)
     n, d = X.shape
-    r = nearest_distances(X, k) + EPS * np.random.random(size=n)
-    ent = d * np.log(np.mean(r)) + psi(n) - psi(k) + d * np.log(2)
+    assert d == 1, "Use multivariate_entropy"
+    e = 2 * nearest_distances(X, k) + EPS * np.random.random(size=n)
+    ent = d * np.mean(np.log(e)) + psi(n) - psi(k) + np.log(1)
+    return ent
+
+""" THIS IS WRONG THIS IS WRONG THIS IS WRONG THIS IS WRONG """
+def multivariate_entropy(X1n: list, k: int=K) -> float:
+    # TODO: FIXME: This only handles 1d variables
+    raise NotImplementedError()
+    r_arr = [nearest_distances(X, k) + EPS * np.random.random(size=len(X))
+             for X in X1n]
+    ent = psi(len(X1n[0])) - psi(k) + np.log(2) - np.sum(r_arr)
     return ent
 
 
@@ -36,7 +46,7 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
     if len(Y.shape) == 1:
         Y = Y.reshape(-1, 1)
     n, d = X.shape
-    r = nearest_distances(np.hstack([X, Y]), k) - EPS * np.random.random(size=n)
+    r = nearest_distances(np.hstack([X, Y]), k) + EPS * np.random.random(size=n)
     n_x = marginal_neighbors(X, r)
     n_y = marginal_neighbors(Y, r)
     return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x) + psi(n_y))

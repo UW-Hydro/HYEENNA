@@ -113,7 +113,7 @@ def estimate_network(varlist: list, names: list,
                     'sample_size': sample_size}
 
         res = shuffle_test(**args)
-        scores.append(res['median'])
+        scores.append(res['median'] * res['significant'])
     # Reformat into a dataframe
     df = pd.DataFrame(columns=names, index=names)
     for link, score in zip(permutations, scores):
