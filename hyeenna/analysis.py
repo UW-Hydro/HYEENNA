@@ -2,7 +2,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import xarray as xr
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, dump, load
 from .estimators import entropy
 from .estimators import transfer_entropy as te
 from .estimators import conditional_transfer_entropy as cte

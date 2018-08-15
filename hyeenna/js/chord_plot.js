@@ -1,8 +1,6 @@
-function chord_plot(matrix, names, colors) {
+function chord_plot(matrix, names, colors, opacity) {
     var w = 700;
     var h = 700;
-	var opacity = 0.9;
-
     var margin = {top: 20,
                   bottom: 0,
                   left: 0,
@@ -42,7 +40,6 @@ function chord_plot(matrix, names, colors) {
     // creating the fill gradient
     function getGradID(d){ return "linkGrad-" + d.source.index + "-" + d.target.index; }
 
-
     var grads = svg.append("defs")
       .selectAll("linearGradient")
       .data(chord)
@@ -55,16 +52,18 @@ function chord_plot(matrix, names, colors) {
       .attr("x2", function(d,i){ return innerRadius * Math.cos((d.target.endAngle-d.target.startAngle) / 2 + d.target.startAngle - Math.PI/2); })
       .attr("y2", function(d,i){ return innerRadius * Math.sin((d.target.endAngle-d.target.startAngle) / 2 + d.target.startAngle - Math.PI/2); });
 
-      // set the starting color (at 0%)
-
+    // set the starting color (at 0%)
     grads.append("stop")
         .attr("offset", "0%")
-        .attr("stop-color", function(d){ return color(d.target.index)});
+        .attr("stop-color", function(d){ return color(d.target.index)})
+		.attr("stop-opacity", function(d){ return opacities(d.source.index) });
 
-        //set the ending color (at 100%)
+    //set the ending color (at 100%)
     grads.append("stop")
         .attr("offset", "100%")
-        .attr("stop-color", function(d){ return color(d.source.index)});
+        .attr("stop-color", function(d){ return color(d.source.index)})
+		.attr("stop-opacity", function(d){ return opacities(d.target.index) });
+
 
     // making the ribbons
     d3.select("g")
@@ -73,14 +72,10 @@ function chord_plot(matrix, names, colors) {
       .enter()
       .append("path")
       .attr("class", function(d) {
-		// The first chord allows us to select all of them.
-		// The second chord allows us to select each individual one.
         return "chord chord-" + d.source.index + " chord-" + d.target.index
       })
       .style("fill", function(d){ return "url(#" + getGradID(d) + ")"; })
       .attr("d", ribbon)
-      // .style("stroke", function(d){ return d3.rgb(color(d.target.index)).darker(); })
-      .style("opacity", function(d){ return 0.6 });
 
     // making the arcs
     var g = wrapper.selectAll("g")
@@ -92,9 +87,8 @@ function chord_plot(matrix, names, colors) {
 
     g.append("path")
       .style("fill", function(d){ return color(d.index)})
-      // .style("stroke", function(d){ return d3.rgb(color(d.index)).darker(); })
-      .attr("d", arcs);
-      //.style("opacity", 1)
+      .attr("d", arcs)
+      .style("opacity", function(d){ return opacities(d.index) });
 
     /// adding labels
     g.append("text")

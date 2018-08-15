@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import psi
 from sklearn.neighbors import NearestNeighbors
 
-K = 10
+K = 5
 METRIC = 'chebyshev'
 EPS = 1e-10
 
@@ -17,8 +17,8 @@ def nearest_distances(X: np.array, k: int=K) -> list:
 def marginal_neighbors(X: np.array, R: np.array) -> list:
     knn = NearestNeighbors(metric=METRIC)
     knn.fit(X)
-    return [len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
-            for p, r in zip(X, R)]
+    return np.array([len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
+                     for p, r in zip(X, R)])
 
 
 def entropy(X: np.array, k: int=K) -> float:
@@ -49,7 +49,7 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
     r = nearest_distances(np.hstack([X, Y]), k) + EPS * np.random.random(size=n)
     n_x = marginal_neighbors(X, r)
     n_y = marginal_neighbors(Y, r)
-    return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x) + psi(n_y))
+    return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x+1) + psi(n_y+1))
 
 
 def conditional_mutual_info(
@@ -71,31 +71,35 @@ def conditional_mutual_info(
     n_xz = marginal_neighbors(xz, r)
     n_yz = marginal_neighbors(yz, r)
     n_z = marginal_neighbors(z, r)
-    return psi(k) - np.mean(psi(n_xz) + psi(n_yz) - psi(n_z))
+    return psi(k) - np.mean(psi(n_xz+1) + psi(n_yz+1) - psi(n_z+1))
 
 
 def transfer_entropy(X: np.array, Y: np.array, tau: int,
-                     omega: int, k: int, l: int, **kwargs) -> float:
+                     omega: int, k: int, l: int, neighbors=10, **kwargs) -> float:
     end = -(np.max([k, l]) + np.max([tau, omega]))
-    x = [Y[:end]]
+    x = np.array(Y[:end]).reshape(-1, 1)
     y, z = [], []
     for w in range(tau, tau+k):
         y.append(X[w:end+w])
     for w in range(omega, omega+l):
         z.append(Y[w:end+w])
-    # TODO: FIXME: Make sure these are flexible
-    x = np.array(x).reshape(-1, 1)
-    y = np.array(y).reshape(-1, k)
-    z = np.array(z).reshape(-1, l)
-    return conditional_mutual_info(x, y, z)
+    if k > 1:
+        y = np.vstack(y).T
+    else:
+        y = np.array(y).reshape(-1, 1)
+    if l > 1:
+        z = np.vstack(z).T
+    else:
+        z = np.array(z).reshape(-1, 1)
+    return conditional_mutual_info(x, y, z, k=neighbors)
 
 
 def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
                                  tau: int, omega: int, nu: int,
-                                 k: int, l: int, m: int) -> float:
+                                 k: int, l: int, m: int, neighbors=K) -> float:
     end = len(X) - (np.max([k, l, m]) + np.max([tau, omega, nu]))
     nZ, dZ = Z.shape
-    x = [Y[:end]]
+    y = [Y[:end]]
     nX = len(X[:end])
     y, z1, z2 = [], [], []
     for w in range(tau, tau+k):
@@ -106,11 +110,11 @@ def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
         z2.append(Z[w:end+w].reshape(-1, nX))
     # TODO: FIXME: Make sure these are flexible
     x = np.array(x).reshape(-1, 1)
-    y = np.array(y).reshape(-1, k)
-    z1 = np.array(z1).reshape(-1, l)
+    y = np.hstack(y)
+    z1 = np.hstack(z1)
     if len(z2):
-        z2 = np.array(z2).reshape(-1, dZ*m)
+        z2 = np.hstack(z2)
         z = np.hstack([np.array(z1), np.array(z2)])
     else:
         z = z1
-    return conditional_mutual_info(x, y, z)
+    return conditional_mutual_info(x, y, z, k=neighbors)

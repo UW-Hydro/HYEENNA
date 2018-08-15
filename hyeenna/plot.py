@@ -14,7 +14,7 @@ BASE_HTML = '''
       require.config({paths: {d3: "https://d3js.org/d3.v4.min"}});
       require(["d3"], function(d3) {
           $JS_CODE
-          chord_plot($DATA, $NAMES, $COLORS);
+          chord_plot($DATA, $NAMES, $COLORS, $OPACITY);
       });
     </script>
     <div id=diagram></div>
@@ -32,10 +32,16 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def plot_chords(data, names, colors):
+def plot_chords(data, names, colors, opacity=0.9):
+    assert len(data) == len(names)
+    if not isinstance(colors, list):
+        colors = [colors] * len(names)
+    if not isinstance(opacity, list):
+        opacity = [opacity] * len(names)
     return HTML(Template(BASE_HTML).substitute({
             'JS_CODE': JS_CODE,
             'DATA': json.dumps(data, cls=NumpyEncoder),
             'NAMES': json.dumps(names, cls=NumpyEncoder),
-            'COLORS': json.dumps(colors, cls=NumpyEncoder)
+            'COLORS': json.dumps(colors, cls=NumpyEncoder),
+            'OPACITY': json.dumps(opacity, cls=NumpyEncoder)
         }))
