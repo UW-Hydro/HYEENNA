@@ -10,6 +10,9 @@ with open(os.path.join(JS_PATH, 'chord_plot.js'), 'r') as f:
     JS_CODE = f.read()
 
 BASE_HTML = '''
+    <style type="text/css">
+      body { font-family: "Computer Modern", sans-serif; }
+    </style>
     <script>
       require.config({paths: {d3: "https://d3js.org/d3.v4.min"}});
       require(["d3"], function(d3) {
@@ -29,6 +32,10 @@ class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.integer):
+            return int(obj)
         return json.JSONEncoder.default(self, obj)
 
 
