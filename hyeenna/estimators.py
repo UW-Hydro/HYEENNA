@@ -210,6 +210,12 @@ def transfer_entropy(X: np.array, Y: np.array,
        Physical Review Letters, 85(2), 461–464.
        https://doi.org/10.1103/PhysRevLett.85.461
     """
+    if len(X.shape) == 1:
+        X = X.reshape(-1, 1)
+
+    if len(Y.shape) == 1:
+        Y = Y.reshape(-1, 1)
+
     start = np.max([k, l]) + np.max([tau, omega])
     nX, dX = X.shape
     nY, dY = Y.shape
@@ -224,12 +230,12 @@ def transfer_entropy(X: np.array, Y: np.array,
         z.append(Y[start-w:-w])
 
     if k > 1:
-        y = np.vstack(y).T
+        y = np.hstack(y)
     else:
         y = np.array(y).reshape(-1, 1)
 
     if l > 1:
-        z = np.vstack(z).T
+        z = np.hstack(z)
     else:
         z = np.array(z).reshape(-1, 1)
 
@@ -282,6 +288,15 @@ def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
        https://doi.org/10.1103/PhysRevLett.85.461
 
     """
+    if len(X.shape) == 1:
+        X = X.reshape(-1, 1)
+
+    if len(Y.shape) == 1:
+        Y = Y.reshape(-1, 1)
+
+    if len(Z.shape) == 1:
+        Z = Z.reshape(-1, 1)
+
     start = np.max([k, l, m]) + np.max([tau, omega, nu])
     nZ, dZ = Z.shape
     nX, dX = X.shape
@@ -301,12 +316,12 @@ def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
     z1 = np.hstack(z1)
 
     if k > 1:
-        y = np.vstack(y).T
+        y = np.hstack(y)
     else:
         y = np.array(y).reshape(-1, 1)
 
     if l > 1:
-        z1 = np.vstack(z1).T
+        z1 = np.hstack(z1)
     else:
         z1 = np.array(z1).reshape(-1, 1)
 
