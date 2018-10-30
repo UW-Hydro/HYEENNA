@@ -58,7 +58,7 @@ def _run_one_estimator_stats(estimator, data, params, sample_size):
     np.random.seed(None)
     X = list(data.values())[0]
     l, w = params.get('l', 1), params.get('omega', 1)
-    ss = np.min([sample_size, (len(X)-l-w)//2])
+    ss = np.min([sample_size, (len(X)-l-w)])
     max_start = len(X) - l - w - ss
     if max_start < 1:
         raise ValueError("Maximum start index is negative!"
@@ -259,7 +259,7 @@ def estimate_info_transfer_network(varlist: list, names: list,
                     'sample_size': sample_size}
 
         res = shuffle_test(**args)
-        scores.append(res['median'] * res['significant'])
+        scores.append(res['mean'] * res['significant'])
     # Reformat into a dataframe
     df = pd.DataFrame(columns=names, index=names)
     for link, score in zip(permutations, scores):

@@ -7,15 +7,18 @@ METRIC = 'chebyshev'
 EPS = 1e-10
 
 
-def nearest_distances(X: np.array, k: int=K) -> list:
+def nearest_distances(X: np.array, Y: np.array=None, k: int=K, metric=METRIC) -> list:
     """Distance to the kth nearest neighbor"""
     knn = NearestNeighbors(n_neighbors=k, metric=METRIC)
     knn.fit(X)
-    d, _ = knn.kneighbors(X)
+    if Y is not None:
+        d, _ = knn.kneighbors(Y)
+    else:
+        d, _ = knn.kneighbors(X)
     return d[:, -1]
 
 
-def marginal_neighbors(X: np.array, R: np.array) -> list:
+def marginal_neighbors(X: np.array, R: np.array, metric=METRIC) -> list:
     """Number of neighbors within a certain radius"""
     knn = NearestNeighbors(metric=METRIC)
     knn.fit(X)
@@ -66,7 +69,7 @@ def entropy(X: np.array, k: int=K) -> float:
     if len(X.shape) == 1:
         X = X.reshape(-1, 1)
     n, d = X.shape
-    e = 2 * nearest_distances(X, k) + EPS * np.random.random(size=n)
+    e = 2 * nearest_distances(X, k=k+1) + EPS * np.random.random(size=n)
     ent = d * np.mean(np.log(e)) + psi(n) - psi(k) + np.log(1)
     return ent
 
@@ -117,8 +120,8 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
         Y = Y.reshape(-1, 1)
     n, d = X.shape
     assert X.shape[0] == Y.shape[0], "{} - {}".format(X.shape, Y.shape)
-    r = (nearest_distances(np.hstack([X, Y]), k)
-         + EPS * np.random.random(size=n))
+    r = (nearest_distances(np.hstack([X, Y]), k=k+1)
+         - EPS * np.random.random(size=n))
     n_x = marginal_neighbors(X, r)
     n_y = marginal_neighbors(Y, r)
     return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x+1) + psi(n_y+1))
@@ -165,11 +168,53 @@ def conditional_mutual_info(
     yz = np.hstack([Y, Z])
     z = np.hstack([Z])
     xyz = np.hstack([X, Y, Z])
-    r = nearest_distances(xyz, k) + EPS * np.random.random(size=nX)
+    r = nearest_distances(xyz, k=k+1) + EPS * np.random.random(size=nX)
     n_xz = marginal_neighbors(xz, r)
     n_yz = marginal_neighbors(yz, r)
     n_z = marginal_neighbors(z, r)
     return psi(k) - np.mean(psi(n_xz+1) + psi(n_yz+1) - psi(n_z+1))
+
+
+def kl_divergence(P: np.array, Q: np.array, k: int=K):
+    """
+    Compute the KL divergence
+
+    Parameters
+    ----------
+    P: np.array
+        Sample from random variable P
+    Q: np.array
+        Sample from random variable Q
+    k: int, optional
+       Number of neighbors to use in estimation
+
+    Returns
+    -------
+    estimated KL divergence D(P|Q)
+
+    References
+    ----------
+    .. [0] - Wang, Q., Kulkarni, S. R., & Verdu, S. (2006). A Nearest-Neighbor
+       Approach to Estimating Divergence between Continuous Random Vectors.
+       In 2006 IEEE International Symposium on Information Theory.
+       https://doi.org/10.1109/ISIT.2006.261842
+    """
+    if len(P.shape) == 1:
+        P = P.reshape(-1, 1)
+
+    if len(Q.shape) == 1:
+        Q = Q.reshape(-1, 1)
+
+    nP, dP = P.shape
+    nQ, dQ = Q.shape
+    assert dP == dQ, "{} - {}".format(P.shape, Q.shape)
+
+    nu = nearest_distances(P, k=k+1, metric=METRIC)
+    rho = nearest_distances(Q, P, k=k, metric=METRIC)
+
+    div = (dP * (np.mean(np.log(nu)) - np.mean(np.log(rho)))
+           + np.log(nQ / (nP-1)))
+    return div
 
 
 def transfer_entropy(X: np.array, Y: np.array,

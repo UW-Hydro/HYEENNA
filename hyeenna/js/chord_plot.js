@@ -58,43 +58,31 @@ function chord_plot(matrix, names, colors, opacity) {
       .append("linearGradient")
       .attr("id", getGradID)
       .attr("gradientUnits", "userSpaceOnUse")
-      .attr("x1", (d, i) => {
-          innerRadius
-          * Math.cos((d.source.endAngle-d.source.startAngle)
-          / 2 + d.source.startAngle - Math.PI/2);
+      .attr("x1", function (d, i) {
+          return innerRadius * Math.cos((d.source.endAngle-d.source.startAngle) / 2 + d.source.startAngle - Math.PI/2);
       })
-      .attr("y1", (d, i) => {
-          innerRadius
-          * Math.sin((d.source.endAngle-d.source.startAngle)
-          / 2 + d.source.startAngle - Math.PI/2);
+      .attr("y1", function (d, i) {
+          return innerRadius * Math.sin((d.source.endAngle-d.source.startAngle) / 2 + d.source.startAngle - Math.PI/2);
       })
-      .attr("x2", (d,i) => {
-          innerRadius
-          * Math.cos((d.target.endAngle-d.target.startAngle)
-          / 2 + d.target.startAngle - Math.PI/2);
+      .attr("x2", function (d, i) {
+          return innerRadius * Math.cos((d.target.endAngle-d.target.startAngle) / 2 + d.target.startAngle - Math.PI/2);
       })
-      .attr("y2", (d,i) => {
-          innerRadius
-          * Math.sin((d.target.endAngle-d.target.startAngle)
-          / 2 + d.target.startAngle - Math.PI/2);
+      .attr("y2", function (d, i) {
+          return innerRadius * Math.sin((d.target.endAngle-d.target.startAngle) / 2 + d.target.startAngle - Math.PI/2);
       });
 
 
     // set the starting color (at 0%)
     grads.append("stop")
       .attr("offset", "0%")
-      .attr("stop-color", d => {color(d.target.index)})
-	  .attr("stop-opacity", d => {opacities(d.source.index)});
-        //.attr("stop-color", function(d){ return color(d.target.index)})
-		//.attr("stop-opacity", function(d){ return opacities(d.source.index) });
+      .attr("stop-color", function(d){ return color(d.target.index)})
+	  .attr("stop-opacity", function(d){ return opacities(d.source.index) });
 
     //set the ending color (at 100%)
     grads.append("stop")
       .attr("offset", "100%")
-      .attr("stop-color", d => {color(d.source.index)})
-	  .attr("stop-opacity", d => {opacities(d.target.index)});
-        //.attr("stop-color", function(d){ return color(d.source.index)})
-		//.attr("stop-opacity", function(d){ return opacities(d.target.index) });
+      .attr("stop-color", function(d){ return color(d.source.index)})
+	  .attr("stop-opacity", function(d){ return opacities(d.target.index) });
 
 
     // making the ribbons
@@ -103,8 +91,8 @@ function chord_plot(matrix, names, colors, opacity) {
       .data(chord)
       .enter()
       .append("path")
-      .attr("class", d => { "chord chord-" + d.source.index + " chord-" + d.target.index })
-      .style("fill", d => { "url(#" + getGradID(d) + ")"; })
+      .attr("class", function (d)  {return "chord chord-" + d.source.index + " chord-" + d.target.index })
+      .style("fill", function (d)  {return "url(#" + getGradID(d) + ")"; })
       .attr("d", ribbon)
 
     // making the arcs
@@ -116,24 +104,24 @@ function chord_plot(matrix, names, colors, opacity) {
 
     // Set transparency
     g.append("path")
-      .style("fill", d => { color(d.index) })
+      .style("fill", function (d) {return color(d.index) })
       .attr("d", arcs)
-      .style("opacity", d => { opacities(d.index) });
+      .style("opacity", function(d) {return opacities(d.index) });
 
     /// Add labels
     g.append("text")
-      .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+      .each(function (d) {return d.angle = (d.startAngle + d.endAngle) / 2; })
       .attr("dy", ".35em")
       .attr("class", "titles")
       .attr("text-anchor", "middle" )
-      .attr("transform", d => {
-        "rotate(" + (d.angle * 180 / Math.PI - 90) + ")"
+      .attr("transform", function (d) {
+        return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")"
         + "translate(" + (outerRadius + 20) + ")"
         + "rotate(" + (270)  + ")"
         + (d.angle < Math.PI/2 ? "rotate(180)" : "")
         + (d.angle > Math.PI *1.25 ? "rotate(180)" : "");
       })
-      .text((d,i) => { names[i]; })
+      .text(function (d,i) {return names[i]; })
       .style("font-size", fontsize)
       .style("font-family", "sans-serif");
 }
