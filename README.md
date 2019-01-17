@@ -1,5 +1,6 @@
 # HYEENNA
-Hydrologic Entropy Estimators based on Nearest Neighbor Approximations
+Hydrologic Entropy Estimators based on Nearest Neighbor Approximations provides estimators for information theoretic
+quantities as well as a series of algorithms and analysis tools implemented in pure python.
 
 ## Installation
 For now, HYEENNA is only available to install from source.  To do so, clone HYEENNA with:
@@ -19,6 +20,14 @@ HYEENNA provides nearest neighbor based estimators for
  * KL Divergence
  * Transfer Entropy
  * Conditional Transfer Entropy
+
+## Examples
+
+We provide several example notebooks in the `notebooks <https://github.com/UW-Hydro/HYEENNA/tree/master/notebooks>__` directory.
+
+## Documentation
+
+See the full documentation at hyeenna.readthedocs.io
 
 ## References
 .. [0] Goria, M. N., Leonenko, N. N., Mergel, V. V., & Inverardi, P. L. N.

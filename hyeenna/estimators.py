@@ -7,7 +7,8 @@ METRIC = 'chebyshev'
 EPS = 1e-10
 
 
-def nearest_distances(X: np.array, Y: np.array=None, k: int=K, metric=METRIC) -> list:
+def nearest_distances(X: np.array, Y: np.array=None,
+                      k: int=K, metric=METRIC) -> list:
     """Distance to the kth nearest neighbor"""
     knn = NearestNeighbors(n_neighbors=k, metric=METRIC)
     knn.fit(X)
@@ -344,8 +345,8 @@ def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
 
     start = np.max([k, l, m]) + np.max([tau, omega, nu])
     nZ, dZ = Z.shape
-    nX, dX = X.shape
     x = Y[start:]
+    nX, dX = x.shape
     y, z1, z2 = [], [], []
 
     for w in range(tau, tau+k):
@@ -355,10 +356,7 @@ def conditional_transfer_entropy(X: np.array, Y: np.array, Z: np.array,
         z1.append(Y[start-w:-w])
 
     for w in range(nu, nu+m):
-        z2.append(Z[start-w:-w].reshape(dX, nX))
-
-    y = np.hstack(y)
-    z1 = np.hstack(z1)
+        z2.append(Z[start-w:-w].reshape(nX, dX))
 
     if k > 1:
         y = np.hstack(y)
