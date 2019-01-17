@@ -11,7 +11,7 @@ refer to the rest of the documentation.
 Estimators
 ==========
 
-.. automodule:: hyenna.estimators
+.. automodule:: hyeenna.estimators
     :members:
 
 Analysis
