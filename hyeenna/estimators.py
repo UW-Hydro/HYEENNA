@@ -128,6 +128,62 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
     return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x+1) + psi(n_y+1))
 
 
+def multi_mutual_info(X: np.array, *args, k: int=K, **kwargs) -> float:
+    """
+    Computes the multivariate mututal information of several random 
+    variables using the KSG nearest neighbor estimator.
+
+    The formula is given by:
+        $$
+        \hat{I}(X_1,...,X_m) = (m-1)\cdot\psi(N) + \psi(k) - \frac{m-1}{k}
+        - \langle \psi(n_{X_1} +1) + ... + \psi(n_{X_m} +1) \rangle
+        $$
+    where
+        - $N$ is the number of samples
+        - $m$ is the number of variables
+        - $k$ is the number of neighbors
+        - $\psi is the digamma function
+        - $\rangle \cdot\rangle$ is the mean
+        - $\n_i$ is the number of points within the distance of
+          the $k^{th}$ nearest neighbor when projected into the
+          subspace spanned by $i$.
+
+    Parameters
+    ----------
+    X: np.array
+        A sample from a random variable
+    *args: List[np.array]
+        Samples from random variables
+    k: int, optional
+        Number of neighbors to use in estimation.
+    **kwargs: np.array
+        Samples from random variables
+
+    Returns
+    -------
+    mi: float
+        The mutual information
+
+    References
+    ----------
+    ..  [0] - Kraskov, A., Stögbauer, H., & Grassberger, P. (2004).
+        Estimating mutual information. Physical Review E - Statistical Physics,
+        Plasmas, Fluids, and Related Interdisciplinary Topics, 69(6), 16.
+        https://doi.org/10.1103/PhysRevE.69.066138
+    """
+    data = [X, *args, *kwargs.values()]
+    for i, d in enumerate(data):
+        if len(d.shape) == 1:
+            data[i] = d.reshape(-1, 1)
+    assert data[0].shape == data[-1].shape
+    n, d = data[0].shape
+    r = (nearest_distances(np.hstack(data), k=k+1) 
+         - EPS * np.random.random(size=n))
+    n_i = [marginal_neighbors(d, r) for d in data]
+    return (psi(k) - (len(data)-1)/k + (len(data)-1) * psi(n) 
+            - np.mean(np.sum([psi(n+1) for n in n_i], axis=0)))
+
+
 def conditional_mutual_info(
         X: np.array, Y: np.array, Z: np.array, k: int=K) -> float:
     """

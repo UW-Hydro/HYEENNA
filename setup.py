@@ -12,6 +12,7 @@ setup(name='hyeenna',
       author='Andrew Bennett',
       author_email='bennett.andr@gmail.com',
       packages=['hyeenna'],
-      install_requires=['xarray', 'scikit-learn', 'numpy', 'pandas', 'joblib'],
+      install_requires=['xarray', 'scikit-learn', 'numpy',
+                        'pandas', 'joblib', 'ipython'],
       keywords=['hydrology', 'climate', 'information theory', 'statistics'],
       tests_require=['pytest'],)
