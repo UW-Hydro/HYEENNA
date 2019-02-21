@@ -143,7 +143,7 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
 
 
 def mi_local_nonuniformity_correction(X, *args, k: int=K,
-                                      alpha=0.25, **kwargs):
+                                      alpha=1.05, **kwargs):
     """
     Compute the local nonuniformity correction factor for strongly
     dependent variables. This correction is calculated based on the
@@ -196,7 +196,7 @@ def mi_local_nonuniformity_correction(X, *args, k: int=K,
 
     # Compute correction factor
     lnc = np.log(V_bar / V)
-    mask = (V_bar / V) >= np.exp(alpha)
+    mask = (V_bar / V) >= alpha
     lnc[mask] = 0
     return np.mean(lnc)
 
