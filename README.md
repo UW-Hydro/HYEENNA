@@ -14,8 +14,9 @@ Then navigate to the HYEENNA directory and install with:
 ## Usage
 
 HYEENNA provides nearest neighbor based estimators for
- * Shannon Entropy (Single and multivariate cases)
- * Mutual Information
+ * Shannon entropy (Single and multivariate cases)
+ * Conditional entropy
+ * Mutual Information (Diadic and polyadic cases)
  * Conditional Mutual Information
  * KL Divergence
  * Transfer Entropy
