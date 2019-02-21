@@ -89,6 +89,49 @@ def entropy(X: np.array, k: int=K) -> float:
     return ent
 
 
+def conditional_entropy(X: np.array, Y: np.array, k: int=K) -> float:
+    """
+    Computes the conditional Shannon entropy of a sample of a random
+    variable X given another sample of a random variable Y using an
+    adaptation of the KL and KSG estimators
+
+    Parameters
+    ----------
+    X: np.array
+        Sample from a random variable
+    Y: np.array
+        Sample from a random variable
+    k: int, optional
+        Number of neighbors to use in estimation
+
+    Returns
+    -------
+    cent: float
+        estimated conditional entropy
+
+    References
+    ----------
+    .. [0] Goria, M. N., Leonenko, N. N., Mergel, V. V., & Inverardi, P. L. N.
+       (2005). A new class of random vector entropy estimators and its
+       applications in testing statistical hypotheses. Journal of
+       Nonparametric Statistics, 17(3), 277–297.
+    .. [1] - Kraskov, A., Stögbauer, H., & Grassberger, P. (2004).
+       Estimating mutual information. Physical Review E - Statistical Physics,
+       Plasmas, Fluids, and Related Interdisciplinary Topics, 69(6), 16.
+       https://doi.org/10.1103/PhysRevE.69.066138
+    """
+    if len(X.shape) == 1:
+        X = X.reshape(-1, 1)
+    if len(Y.shape) == 1:
+        Y = Y.reshape(-1, 1)
+    n, d = X.shape
+    assert X.shape[0] == Y.shape[0], "{} - {}".format(X.shape, Y.shape)
+    r = (nearest_distances(np.hstack([X, Y]), k=k+1)
+         - EPS * np.random.random(size=n))
+    n_y = marginal_neighbors(Y, r)
+    return d * np.mean(np.log(2*r)) + np.mean(psi(n_y)) - psi(k)
+
+
 def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
     """
     Computes the Mututal information of two random variables, X
