@@ -7,6 +7,20 @@ METRIC = 'chebyshev'
 EPS = 1e-10
 
 
+def nearest_distances_vec(X: np.array, Y: np.array=None,
+                          k: int=K, metric=METRIC) -> np.array:
+    """Find vector distance to all k nearest neighbors"""
+    knn = NearestNeighbors(n_neighbors=k, metric=METRIC)
+    knn.fit(X)
+    if Y is not None:
+        _, l = knn.kneighbors(Y)
+        dvec = np.array([X[i] - Y[ll[1:]] for i, ll in enumerate(l)])
+    else:
+        _, l = knn.kneighbors(X)
+        dvec = np.array([X[i] - X[ll[1:]] for i, ll in enumerate(l)])
+    return dvec
+
+
 def nearest_distances(X: np.array, Y: np.array=None,
                       k: int=K, metric=METRIC) -> list:
     """Distance to the kth nearest neighbor"""
@@ -128,9 +142,68 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
     return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x+1) + psi(n_y+1))
 
 
+def mi_local_nonuniformity_correction(X, *args, k: int=K,
+                                      alpha=0.25, **kwargs):
+    """
+    Compute the local nonuniformity correction factor for strongly
+    dependent variables. This correction is calculated based on the
+    structure of the space of k-nearest neighbors. The volume of
+    the hyper-rectangle of the maximum-norm bounding box for the
+    k-nearest neighbor estimation is compared to that of the
+    hyper-rectangle bounding the principal components of the covariance
+    matrix of the k-nearest neighbor locations.
+
+    Parameters
+    ----------
+    X: np.array
+        A sample from a random variable
+    *args: List[np.array]
+        Samples from random variables
+    k: int, optional
+        Number of neighbors to use in estimation.
+    alpha: float, optional
+        Sensitivity parameter for filtering non-dependent volumes
+    **kwargs: np.array
+        Samples from random variables
+
+    Returns
+    -------
+    lnc: float
+        The correction factor to be subtracted from the mutual information
+
+    References
+    ----------
+    .. [0] - Gao, S., Steeg, G. V., & Galstyan, A. (2014). Efficient
+    Estimation of Mutual Information for Strongly Dependent Variables.
+    Retrieved from https://arxiv.org/abs/1411.2003v3
+    """
+    data = [X, *args, *kwargs.values()]
+    for i, d in enumerate(data):
+        if len(d.shape) == 1:
+            data[i] = d.reshape(-1, 1)
+    assert data[0].shape == data[-1].shape
+    n, d = data[0].shape
+    M = (nearest_distances_vec(np.hstack(data), k=k+1)
+         + EPS * np.random.random(size=(n,k, d)))
+
+    # Compute volume of hypercube bounding r[i]
+    V = np.prod(np.max(np.abs(M), axis=1), axis=-1)
+
+    # Compute volume of PCA of neighbors
+    C = np.array([np.cov(M[i].T) for i in range(M.shape[0])])
+    eigvals, _ = np.linalg.eig(C)
+    V_bar = np.prod(np.sqrt(eigvals), axis=-1)
+
+    # Compute correction factor
+    lnc = np.log(V_bar / V)
+    mask = (V_bar / V) >= np.exp(alpha)
+    lnc[mask] = 0
+    return np.mean(lnc)
+
+
 def multi_mutual_info(X: np.array, *args, k: int=K, **kwargs) -> float:
     """
-    Computes the multivariate mututal information of several random 
+    Computes the multivariate mututal information of several random
     variables using the KSG nearest neighbor estimator.
 
     The formula is given by:
@@ -177,10 +250,10 @@ def multi_mutual_info(X: np.array, *args, k: int=K, **kwargs) -> float:
             data[i] = d.reshape(-1, 1)
     assert data[0].shape == data[-1].shape
     n, d = data[0].shape
-    r = (nearest_distances(np.hstack(data), k=k+1) 
+    r = (nearest_distances(np.hstack(data), k=k+1)
          - EPS * np.random.random(size=n))
     n_i = [marginal_neighbors(d, r) for d in data]
-    return (psi(k) - (len(data)-1)/k + (len(data)-1) * psi(n) 
+    return (psi(k) - (len(data)-1)/k + (len(data)-1) * psi(n)
             - np.mean(np.sum([psi(n+1) for n in n_i], axis=0)))
 
 
