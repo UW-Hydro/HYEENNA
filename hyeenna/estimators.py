@@ -227,15 +227,16 @@ def mi_local_nonuniformity_correction(X, *args, k: int=K,
     assert data[0].shape == data[-1].shape
     n, d = data[0].shape
     M = (nearest_distances_vec(np.hstack(data), k=k+1)
-         + EPS * np.random.random(size=(n,k, d)))
+         + EPS * np.random.random(size=(n, k, d)))
 
     # Compute volume of hypercube bounding r[i]
-    V = np.prod(np.max(np.abs(M), axis=1), axis=-1)
+    V = np.prod(np.max(np.abs(M), axis=1), axis=1)
 
     # Compute volume of PCA of neighbors
     C = np.array([np.cov(M[i].T) for i in range(M.shape[0])])
-    eigvals, _ = np.linalg.eig(C)
-    V_bar = np.prod(np.sqrt(eigvals), axis=-1)
+    eigvals, eigvecs = np.linalg.eig(C)
+    projected = np.abs([np.inner(eigvecs[i], M[i]) for i in range(M.shape[0])])
+    V_bar = np.product(np.max(projected, axis=-1), axis=-1)
 
     # Compute correction factor
     lnc = np.log(V_bar / V)
