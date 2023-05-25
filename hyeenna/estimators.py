@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import psi
-from sklearn.neighbors import NearestNeighbors
+from sklearn.neighbors import NearestNeighbors, KDTree
 
 K = 5
 METRIC = 'chebyshev'
@@ -16,7 +16,7 @@ def nearest_distances_vec(X: np.array, Y: np.array=None,
         _, l = knn.kneighbors(Y)
         dvec = np.array([X[i] - Y[ll[1:]] for i, ll in enumerate(l)])
     else:
-        _, l = knn.kneighbors(X)
+        _, l = knn.kneighbors()
         dvec = np.array([X[i] - X[ll[1:]] for i, ll in enumerate(l)])
     return dvec
 
@@ -29,17 +29,16 @@ def nearest_distances(X: np.array, Y: np.array=None,
     if Y is not None:
         d, _ = knn.kneighbors(Y)
     else:
-        d, _ = knn.kneighbors(X)
+        d, _ = knn.kneighbors()
     return d[:, -1]
 
 
 def marginal_neighbors(X: np.array, R: np.array, metric=METRIC) -> list:
     """Number of neighbors within a certain radius"""
-    knn = NearestNeighbors(metric=METRIC)
-    knn.fit(X)
-    return np.array([len(knn.radius_neighbors(p.reshape(1, -1), r)[0][0])
-                     for p, r in zip(X, R)])
-
+    kd = KDTree(X, metric=metric)
+    n = kd.query_radius(X, R, count_only=True, return_distance=False)
+    n = np.array(n)  - 1.0
+    return n
 
 def entropy(X: np.array, k: int=K) -> float:
     """
@@ -176,13 +175,14 @@ def mutual_info(X: np.array, Y: np.array, k: int=K) -> float:
         X = X.reshape(-1, 1)
     if len(Y.shape) == 1:
         Y = Y.reshape(-1, 1)
-    n, d = X.shape
     assert X.shape[0] == Y.shape[0], "{} - {}".format(X.shape, Y.shape)
-    r = (nearest_distances(np.hstack([X, Y]), k=k+1)
+    n, d = X.shape
+
+    r = (nearest_distances(np.hstack([X, Y]), k=k)
          - EPS * np.random.random(size=n))
     n_x = marginal_neighbors(X, r)
     n_y = marginal_neighbors(Y, r)
-    return psi(n) + psi(k) - (1./k) - np.mean(psi(n_x+1) + psi(n_y+1))
+    return psi(n) + psi(k) - np.mean(psi(n_x+1)) - np.mean(psi(n_y+1))
 
 
 def mi_local_nonuniformity_correction(X, *args, k: int=K,
@@ -342,7 +342,7 @@ def conditional_mutual_info(
     yz = np.hstack([Y, Z])
     z = np.hstack([Z])
     xyz = np.hstack([X, Y, Z])
-    r = nearest_distances(xyz, k=k+1) + EPS * np.random.random(size=nX)
+    r = nearest_distances(xyz, k=k) + EPS * np.random.random(size=nX)
     n_xz = marginal_neighbors(xz, r)
     n_yz = marginal_neighbors(yz, r)
     n_z = marginal_neighbors(z, r)
